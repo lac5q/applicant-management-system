@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import Head from 'next/head'
 
 interface Applicant {
@@ -8,66 +8,209 @@ interface Applicant {
   location: string
   hourly_rate: string
   job_success: string
+  total_earned: string
+  hours_worked: string
+  jobs_completed: string
   skills: string[]
+  overview: string
+  proposal_text: string
+  job_title: string
+  profile_url: string
+  status: string
   rating: number
+  applied_date: string
+  notes: string
+  profile_image: string
+  screenshot_source: string
+  portfolio_links: string[]
+  work_samples: string[]
+  processed_at: string
+  source_file: string
+  data_quality_score: number
+}
+
+interface Stats {
+  total: number
+  positions: number
+  averageRating: string
+  totalEarned: number
+}
+
+interface Filters {
+  search: string
+  skills: string[]
+  jobPosting: string
+  location: string
+  minRating: number
+  maxHourlyRate: number
+  minJobSuccess: number
   status: string
 }
 
-export default function Home() {
+const Home = React.memo(function Home() {
   const [applicants, setApplicants] = useState<Applicant[]>([])
-  const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<Stats>({
     total: 0,
     positions: 0,
-    averageRating: 0
+    averageRating: '0',
+    totalEarned: 0
+  })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [filters, setFilters] = useState<Filters>({
+    search: '',
+    skills: [],
+    jobPosting: '',
+    location: '',
+    minRating: 0,
+    maxHourlyRate: 100,
+    minJobSuccess: 0,
+    status: ''
+  })
+  const [expandedFilters, setExpandedFilters] = useState<{[key: string]: boolean}>({
+    jobPosting: true,
+    search: false,
+    location: false,
+    skills: false,
+    rating: false
   })
 
-  useEffect(() => {
-    // Load sample data
-    const sampleApplicants: Applicant[] = [
-      {
-        id: '1',
-        name: 'Sarah Johnson',
-        title: 'Senior UI/UX Designer',
-        location: 'San Francisco, CA',
-        hourly_rate: '$45/hr',
-        job_success: '98%',
-        skills: ['Figma', 'Adobe XD', 'Prototyping', 'User Research'],
-        rating: 4.8,
-        status: 'Active'
-      },
-      {
-        id: '2',
-        name: 'Michael Chen',
-        title: 'Full Stack Developer',
-        location: 'New York, NY',
-        hourly_rate: '$55/hr',
-        job_success: '95%',
-        skills: ['React', 'Node.js', 'TypeScript', 'MongoDB'],
-        rating: 4.6,
-        status: 'Active'
-      },
-      {
-        id: '3',
-        name: 'Emily Rodriguez',
-        title: 'Product Manager',
-        location: 'Austin, TX',
-        hourly_rate: '$65/hr',
-        job_success: '99%',
-        skills: ['Agile', 'Product Strategy', 'Data Analysis', 'User Stories'],
-        rating: 4.9,
-        status: 'Active'
-      }
-    ]
-
-    setApplicants(sampleApplicants)
-    setStats({
-      total: sampleApplicants.length,
-      positions: 3,
-      averageRating: 4.7
-    })
-    setLoading(false)
+  // Memoize filter functions to prevent unnecessary re-renders
+  const toggleFilterSection = useCallback((section: string) => {
+    setExpandedFilters(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }))
   }, [])
+
+  const toggleSkill = useCallback((skill: string) => {
+    setFilters(prev => ({
+      ...prev,
+      skills: prev.skills.includes(skill) 
+        ? prev.skills.filter(s => s !== skill)
+        : [...prev.skills, skill]
+    }))
+  }, [])
+
+  const clearFilters = useCallback(() => {
+    setFilters({
+      search: '',
+      skills: [],
+      jobPosting: '',
+      location: '',
+      minRating: 0,
+      maxHourlyRate: 100,
+      minJobSuccess: 0,
+      status: ''
+    })
+  }, [])
+
+  const hasActiveFilters = useCallback(() => {
+    return filters.search || 
+           filters.skills.length > 0 || 
+           filters.jobPosting || 
+           filters.location || 
+           filters.minRating > 0 || 
+           filters.maxHourlyRate < 100 || 
+           filters.minJobSuccess > 0
+  }, [filters])
+
+  // Available filter options
+  const availableSkills = ['UI/UX Design', 'Figma', 'React', 'Node.js', 'Shopify', 'JavaScript', 'Adobe XD', 'Prototyping', 'Webflow', 'Vue.js', 'MongoDB', 'HTML', 'CSS', 'Liquid', 'Graphic Design', 'Adobe Photoshop', 'Adobe Illustrator', 'Sketch', 'User Research', 'Wireframing', 'Responsive Design', 'Conversion Rate Optimization', 'Landing Page Design', 'A/B Testing', 'Web Design', 'Mobile App Design', 'User Interface Design', 'Express.js']
+  const availableJobPostings = [
+    'URGENT: Contract-to-hire Shopify Developer + UX Specialist - Start This Week!', 
+    'URGENT Contract-to-Hire UX/Conversion Designer - Start This Week'
+  ]
+  const availableLocations = ['Delhi, India', 'India', 'Kolkata, India', 'Kyiv, Ukraine', 'Istanbul, Turkey', 'Lahore, Pakistan']
+  const availableStatuses = ['pending', 'Active', 'Inactive']
+
+  useEffect(() => {
+    const fetchApplicants = async () => {
+      try {
+        console.log('Fetching applicants from API...')
+        const response = await fetch('/api/applicants/')
+        console.log('API response status:', response.status)
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch applicants: ${response.status}`)
+        }
+        
+        const data = await response.json()
+        console.log('API data received:', data)
+        console.log('Number of applicants:', data.applicants?.length)
+        
+        setApplicants(data.applicants)
+        setStats(data.stats)
+        setLoading(false)
+      } catch (err) {
+        console.error('Error fetching applicants:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load applicants')
+        setLoading(false)
+      }
+    }
+
+    fetchApplicants()
+  }, [])
+
+  // Apply filters using useMemo for better performance
+  const filteredApplicants = useMemo(() => {
+    return applicants.filter(applicant => {
+      // Search filter
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase()
+        const searchableText = `${applicant.name} ${applicant.title} ${applicant.location} ${applicant.skills.join(' ')} ${applicant.overview}`.toLowerCase()
+        if (!searchableText.includes(searchLower)) return false
+      }
+
+      // Skills filter
+      if (filters.skills.length > 0) {
+        const hasRequiredSkill = filters.skills.some(skill => 
+          applicant.skills.some(applicantSkill => 
+            applicantSkill.toLowerCase().includes(skill.toLowerCase())
+          )
+        )
+        if (!hasRequiredSkill) return false
+      }
+
+      // Job posting filter
+      if (filters.jobPosting && applicant.job_title !== filters.jobPosting) {
+        return false
+      }
+
+      // Location filter
+      if (filters.location && applicant.location !== filters.location) {
+        return false
+      }
+
+      // Rating filter
+      if (filters.minRating > 0 && applicant.rating < filters.minRating) {
+        return false
+      }
+
+      // Hourly rate filter
+      if (filters.maxHourlyRate < 100) {
+        const rate = parseFloat(applicant.hourly_rate.replace(/[^0-9.]/g, ''))
+        if (rate > filters.maxHourlyRate) return false
+      }
+
+      // Job success filter
+      if (filters.minJobSuccess > 0) {
+        const successRate = parseFloat(applicant.job_success.replace(/[^0-9.]/g, ''))
+        if (successRate < filters.minJobSuccess) return false
+      }
+
+      // Status filter
+      if (filters.status && applicant.status !== filters.status) {
+        return false
+      }
+
+      return true
+    })
+  }, [applicants, filters])
+
+
+
+
 
   if (loading) {
     return (
@@ -75,6 +218,23 @@ export default function Home() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading applicant data...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-600 text-xl mb-4">⚠️ Error Loading Data</div>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            Retry
+          </button>
         </div>
       </div>
     )
@@ -99,7 +259,7 @@ export default function Home() {
                   Applicant Management System
                 </h1>
                 <p className="text-gray-600 mt-1">
-                  Modern hiring platform with intelligent filtering
+                  Real applicant data from Upwork screenshots with advanced filtering
                 </p>
               </div>
               <div className="flex space-x-4">
@@ -114,9 +274,57 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Stats Section */}
+        {/* Extraction Status Section */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow mb-8">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">📊 Extraction Status</h2>
+              <p className="text-sm text-gray-600 mt-1">Progress tracking for Upwork screenshot processing</p>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">60</div>
+                  <div className="text-sm text-gray-600">Expected</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">{filteredApplicants.length}</div>
+                  <div className="text-sm text-gray-600">Extracted</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">{filteredApplicants.length}</div>
+                  <div className="text-sm text-gray-600">Saved</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-orange-600">{filteredApplicants.filter(a => a.rating > 0).length}</div>
+                  <div className="text-sm text-gray-600">Rated</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-indigo-600">{((filteredApplicants.length / 60) * 100).toFixed(1)}%</div>
+                  <div className="text-sm text-gray-600">Complete</div>
+                </div>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
+                <div 
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-300" 
+                  style={{ width: `${(filteredApplicants.length / 60) * 100}%` }}
+                ></div>
+              </div>
+              <div className="flex justify-between items-center text-sm text-gray-600">
+                <span>🟡 Extraction in progress - {60 - filteredApplicants.length} candidates remaining</span>
+                <a 
+                  href="/output/reports/extraction_status_dashboard.html" 
+                  target="_blank"
+                  className="text-blue-600 hover:text-blue-800 underline"
+                >
+                  View Detailed Dashboard →
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Section */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center">
                 <div className="p-3 rounded-full bg-blue-100 text-blue-600">
@@ -126,7 +334,7 @@ export default function Home() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Applicants</p>
-                  <p className="text-2xl font-semibold text-gray-900">{stats.total}</p>
+                  <p className="text-2xl font-semibold text-gray-900">{filteredApplicants.length} / {stats.total}</p>
                 </div>
               </div>
             </div>
@@ -158,67 +366,339 @@ export default function Home() {
                 </div>
               </div>
             </div>
+
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center">
+                <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                  </svg>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Earned</p>
+                  <p className="text-2xl font-semibold text-gray-900">${stats.totalEarned.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Filters Section */}
+          <div className="bg-white rounded-lg shadow mb-8">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Filters {hasActiveFilters() && (
+                    <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      Active
+                    </span>
+                  )}
+                </h2>
+                {hasActiveFilters() && (
+                  <button 
+                    onClick={clearFilters}
+                    className="text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    Clear All Filters
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              {/* Job Posting Filter - Always Visible */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Job Posting {filters.jobPosting && (
+                    <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      ✓
+                    </span>
+                  )}
+                </label>
+                <select
+                  value={filters.jobPosting}
+                  onChange={(e) => setFilters(prev => ({ ...prev, jobPosting: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Job Postings</option>
+                  {availableJobPostings.map(posting => (
+                    <option key={posting} value={posting}>{posting}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Search Filter - Collapsible */}
+              <div className="border-t border-gray-200 pt-4">
+                <button
+                  onClick={() => toggleFilterSection('search')}
+                  className="flex items-center justify-between w-full text-left"
+                >
+                  <span className="text-sm font-medium text-gray-700">
+                    Search {filters.search && (
+                      <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        ✓
+                      </span>
+                    )}
+                  </span>
+                  <svg
+                    className={`w-5 h-5 text-gray-500 transform transition-transform ${expandedFilters.search ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {expandedFilters.search && (
+                  <div className="mt-3">
+                    <input
+                      type="text"
+                      placeholder="Search by name, title, skills, or overview..."
+                      value={filters.search}
+                      onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Location Filter - Collapsible */}
+              <div className="border-t border-gray-200 pt-4">
+                <button
+                  onClick={() => toggleFilterSection('location')}
+                  className="flex items-center justify-between w-full text-left"
+                >
+                  <span className="text-sm font-medium text-gray-700">
+                    Location {filters.location && (
+                      <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        ✓
+                      </span>
+                    )}
+                  </span>
+                  <svg
+                    className={`w-5 h-5 text-gray-500 transform transition-transform ${expandedFilters.location ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {expandedFilters.location && (
+                  <div className="mt-3">
+                    <select
+                      value={filters.location}
+                      onChange={(e) => setFilters(prev => ({ ...prev, location: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">All Locations</option>
+                      {availableLocations.map(location => (
+                        <option key={location} value={location}>{location}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Skills Filter - Collapsible */}
+              <div className="border-t border-gray-200 pt-4">
+                <button
+                  onClick={() => toggleFilterSection('skills')}
+                  className="flex items-center justify-between w-full text-left"
+                >
+                  <span className="text-sm font-medium text-gray-700">
+                    Required Skills {filters.skills.length > 0 && `(${filters.skills.length} selected)`}
+                  </span>
+                  <svg
+                    className={`w-5 h-5 text-gray-500 transform transition-transform ${expandedFilters.skills ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {expandedFilters.skills && (
+                  <div className="mt-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-48 overflow-y-auto">
+                      {availableSkills.map(skill => (
+                        <label key={skill} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={filters.skills.includes(skill)}
+                            onChange={() => toggleSkill(skill)}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700">{skill}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Rating and Rate Filters - Collapsible */}
+              <div className="border-t border-gray-200 pt-4">
+                <button
+                  onClick={() => toggleFilterSection('rating')}
+                  className="flex items-center justify-between w-full text-left"
+                >
+                  <span className="text-sm font-medium text-gray-700">
+                    Rating & Rate Filters {(filters.minRating > 0 || filters.maxHourlyRate < 100 || filters.minJobSuccess > 0) && (
+                      <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        ✓
+                      </span>
+                    )}
+                  </span>
+                  <svg
+                    className={`w-5 h-5 text-gray-500 transform transition-transform ${expandedFilters.rating ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {expandedFilters.rating && (
+                  <div className="mt-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Rating</label>
+                        <select
+                          value={filters.minRating}
+                          onChange={(e) => setFilters(prev => ({ ...prev, minRating: Number(e.target.value) }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value={0}>Any Rating</option>
+                          <option value={1}>1+ Stars</option>
+                          <option value={2}>2+ Stars</option>
+                          <option value={3}>3+ Stars</option>
+                          <option value={4}>4+ Stars</option>
+                          <option value={5}>5 Stars</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Max Hourly Rate</label>
+                        <select
+                          value={filters.maxHourlyRate}
+                          onChange={(e) => setFilters(prev => ({ ...prev, maxHourlyRate: Number(e.target.value) }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value={100}>Any Rate</option>
+                          <option value={15}>$15/hr or less</option>
+                          <option value={20}>$20/hr or less</option>
+                          <option value={25}>$25/hr or less</option>
+                          <option value={30}>$30/hr or less</option>
+                          <option value={40}>$40/hr or less</option>
+                          <option value={50}>$50/hr or less</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Min Job Success</label>
+                        <select
+                          value={filters.minJobSuccess}
+                          onChange={(e) => setFilters(prev => ({ ...prev, minJobSuccess: Number(e.target.value) }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value={0}>Any Success Rate</option>
+                          <option value={90}>90%+</option>
+                          <option value={95}>95%+</option>
+                          <option value={98}>98%+</option>
+                          <option value={99}>99%+</option>
+                          <option value={100}>100%</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Applicants List */}
           <div className="bg-white rounded-lg shadow">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Recent Applicants</h2>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Filtered Applicants ({filteredApplicants.length} of {stats.total})
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">Showing applicants from Upwork job postings</p>
             </div>
             <div className="divide-y divide-gray-200">
-              {applicants.map((applicant) => (
-                <div key={applicant.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex-shrink-0">
-                        <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                          <span className="text-blue-600 font-semibold text-lg">
-                            {applicant.name.split(' ').map(n => n[0]).join('')}
-                          </span>
+              {filteredApplicants.length === 0 ? (
+                <div className="px-6 py-8 text-center">
+                  <p className="text-gray-500">No applicants match your current filters.</p>
+                  <button 
+                    onClick={clearFilters}
+                    className="mt-2 text-blue-600 hover:text-blue-800"
+                  >
+                    Clear filters to see all applicants
+                  </button>
+                </div>
+              ) : (
+                filteredApplicants.map((applicant) => (
+                  <div key={applicant.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="flex-shrink-0">
+                          <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                            <span className="text-blue-600 font-semibold text-lg">
+                              {applicant.name.split(' ').map(n => n[0]).join('')}
+                            </span>
+                          </div>
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-medium text-gray-900">{applicant.name}</h3>
+                          <p className="text-sm text-gray-600">{applicant.title}</p>
+                          <p className="text-sm text-gray-500">{applicant.location}</p>
+                          <p className="text-xs text-gray-400 mt-1">{applicant.job_title}</p>
                         </div>
                       </div>
-                      <div>
-                        <h3 className="text-lg font-medium text-gray-900">{applicant.name}</h3>
-                        <p className="text-sm text-gray-600">{applicant.title}</p>
-                        <p className="text-sm text-gray-500">{applicant.location}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-gray-900">{applicant.hourly_rate}</p>
-                        <p className="text-sm text-gray-600">{applicant.job_success} Success</p>
-                      </div>
-                      <div className="flex items-center">
-                        <span className="text-yellow-400">★</span>
-                        <span className="ml-1 text-sm text-gray-600">{applicant.rating}</span>
-                      </div>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        applicant.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {applicant.status}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mt-3">
-                    <div className="flex flex-wrap gap-2">
-                      {applicant.skills.slice(0, 3).map((skill, index) => (
-                        <span key={index} className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-                          {skill}
+                      <div className="flex items-center space-x-4">
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-gray-900">{applicant.hourly_rate}</p>
+                          <p className="text-sm text-gray-600">{applicant.job_success}</p>
+                          <p className="text-xs text-gray-500">{applicant.total_earned}</p>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="text-yellow-400">★</span>
+                          <span className="ml-1 text-sm text-gray-600">{applicant.rating}</span>
+                        </div>
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          applicant.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {applicant.status}
                         </span>
-                      ))}
-                      {applicant.skills.length > 3 && (
-                        <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
-                          +{applicant.skills.length - 3} more
-                        </span>
-                      )}
+                      </div>
                     </div>
+                    <div className="mt-3">
+                      <div className="flex flex-wrap gap-2">
+                        {applicant.skills.slice(0, 4).map((skill, index) => (
+                          <span key={index} className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                            {skill}
+                          </span>
+                        ))}
+                        {applicant.skills.length > 4 && (
+                          <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
+                            +{applicant.skills.length - 4} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {applicant.overview && (
+                      <div className="mt-3">
+                        <p className="text-sm text-gray-600 line-clamp-2">{applicant.overview}</p>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
       </div>
     </>
   )
-} 
+})
+
+export default Home 

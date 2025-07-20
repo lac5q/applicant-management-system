@@ -1,135 +1,203 @@
-# Recruiting Pipeline - Upwork Applicants Scraper
+# Applicant Management System
 
-## 📁 Project Structure
+**Created:** July 19, 2025  
+**Updated:** July 19, 2025  
+**Version:** 1.0.0
+
+A modern, full-stack applicant management system built with Next.js frontend and Python backend, featuring intelligent filtering, data processing, and portfolio access.
+
+## 🚀 Live Demo
+
+**GitHub Pages:** [https://lac5q.github.io/applicant-management-system](https://lac5q.github.io/applicant-management-system)
+
+## ✨ Features
+
+### 🎯 Core Functionality
+- **Applicant Tracking**: Comprehensive database for managing job applicants
+- **Intelligent Filtering**: Advanced search and filter capabilities
+- **Portfolio Access**: Direct access to applicant portfolios and work samples
+- **Rating System**: Multi-criteria evaluation and scoring
+- **Data Processing**: Automated processing of applicant data from multiple sources
+
+### 🛠️ Technical Stack
+- **Frontend**: Next.js 14 with TypeScript and Tailwind CSS
+- **Backend**: Python with FastAPI and SQLite database
+- **Data Processing**: Pandas, NumPy, and custom processing scripts
+- **Web Scraping**: MCP (Model Context Protocol) integration with Playwright
+- **Deployment**: GitHub Pages with GitHub Actions CI/CD
+
+### 📊 Data Management
+- **Database**: SQLite with structured tables for jobs, applicants, skills, and ratings
+- **Import/Export**: JSON, CSV, and HTML report generation
+- **Image Processing**: OCR capabilities for processing screenshots
+- **Real-time Updates**: Live data processing and updates
+
+## 🏗️ Project Structure
 
 ```
 Recruiting/
-├── applicants/          # Real applicant data files
-├── scripts/            # Python scripts and automation tools
-├── configuration/      # Project configuration files
-├── context/           # Outputs, reports, and temporary files
-└── README.md          # This file
+├── .github/workflows/     # GitHub Actions for deployment
+├── nextjs-app/           # Next.js frontend application
+├── scripts/              # Python processing scripts
+├── configuration/        # Configuration files
+├── output/              # Generated outputs and reports
+├── site/                # Static site files
+└── types/               # TypeScript type definitions
 ```
 
-## 🔧 MCP Configuration
-
-This project uses **Docker MCP** for Playwright browser automation to ensure consistency.
-
-### MCP Server Setup
-- **Docker MCP**: `MCP_DOCKER` server configured in `~/.cursor/mcp.json`
-- **Removed**: Separate Playwright package to avoid conflicts
-- **Approach**: Single, consistent Docker MCP server for all browser automation
-
-### MCP Configuration Location
-```
-~/.cursor/mcp.json
-```
-
-## 🚀 Main Scraper Script
-
-**File**: `scripts/upwork_applicants_scraper_docker_mcp.py`
-
-### Features
-- ✅ Uses Docker MCP for Playwright browser automation
-- ✅ Scrapes real Upwork applicant profiles (no "John Doe" data)
-- ✅ Hardcoded brief URLs for consistency
-- ✅ Supports UX Designer and Shopify Developer roles
-- ✅ Real-time progress saving
-- ✅ Comprehensive error handling
-
-### Hardcoded Brief URLs
-- **UX Designer**: `https://www.upwork.com/jobs/~021945256288324407279`
-- **Shopify Developer**: `https://www.upwork.com/jobs/~021945253868907578965`
-
-## 📊 Data Organization
-
-### Applicants Folder
-Contains real applicant data files:
-- `upwork_applicants_ux_designer_*.json` - UX Designer applicants
-- `upwork_applicants_shopify_developer_*.json` - Shopify Developer applicants
-- `upwork_applicants_evaluation_*.json` - Evaluation results
-
-### Context Folder
-- `hiring_pipeline_output/` - Pipeline outputs
-- `evaluations/` - Evaluation reports
-- `reports/` - Generated reports
-- `temp/` - Temporary files
-
-## 🛠️ Usage
+## 🚀 Quick Start
 
 ### Prerequisites
-1. **Docker Desktop** running
-2. **Docker MCP Gateway** active
-3. **Logged into Upwork** in browser session
+- Node.js 18+ 
+- Python 3.8+
+- Git
 
-### Running the Scraper
-```bash
-cd scripts
-python upwork_applicants_scraper_docker_mcp.py
-```
+### Installation
 
-### Expected Output
-- Real applicant profiles with actual names, skills, rates, etc.
-- Progress saved every 10 applicants
-- Final results in `applicants/` folder
-
-## 🔍 Data Fields Collected
-
-Each applicant profile includes:
-- **Basic Info**: Name, title, location, hourly rate
-- **Skills**: Technical skills and expertise
-- **Experience**: Work history and background
-- **Performance**: Rating, completion rate, response time
-- **Portfolio**: Links and certifications
-- **Metadata**: Profile URL, role, scraping timestamp
-
-## 🧹 Cleanup Completed
-
-### Removed Files
-- ❌ All "John Doe" dummy data files
-- ❌ Empty JSON files with `[]` or `{}` content
-- ❌ Old scraper versions with different MCP approaches
-- ❌ Separate Playwright package from MCP config
-
-### Kept Files
-- ✅ Real applicant data (25+ UX Designer files, 5 Shopify Developer files)
-- ✅ Evaluation data with real results
-- ✅ Docker MCP scraper script
-- ✅ Clean project structure
-
-## 📈 Next Steps
-
-1. **Ensure Docker MCP is running**:
+1. **Clone the repository**
    ```bash
-   docker ps | grep mcp
+   git clone https://github.com/lac5q/applicant-management-system.git
+   cd applicant-management-system
    ```
 
-2. **Start the scraper**:
+2. **Set up Python environment**
    ```bash
-   cd scripts
-   python upwork_applicants_scraper_docker_mcp.py
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install -r configuration/requirements.txt
+   pip install -r scripts/requirements_candidate_processing.txt
    ```
 
-3. **Monitor progress** and verify real data collection
+3. **Set up Next.js application**
+   ```bash
+   cd nextjs-app
+   npm install
+   ```
 
-## 🔧 Troubleshooting
+4. **Start the development server**
+   ```bash
+   # From the root directory
+   ./startup.sh
+   
+   # Or manually
+   cd nextjs-app
+   npm run dev
+   ```
 
-### Common Issues
-- **"John Doe" data**: Ensure Docker MCP server is running
-- **No applicants found**: Check Upwork login status
-- **Navigation errors**: Verify brief URLs are accessible
+5. **Access the application**
+   - **Local Development**: http://localhost:3000
+   - **Production**: https://lac5q.github.io/applicant-management-system
 
-### MCP Server Status
+## 📋 Usage
+
+### Processing Applicants
 ```bash
-# Check if Docker MCP is running
-docker ps | grep mcp
+# Process existing candidate data
+python3 scripts/process_existing_candidates.py
 
-# Check MCP configuration
-cat ~/.cursor/mcp.json | grep -A 5 "MCP_DOCKER"
+# Generate reports
+python3 scripts/build_site_structure.py
 ```
+
+### Database Management
+```bash
+# Initialize database
+python3 -c "from scripts.applicant_database_manager import ApplicantDatabaseManager; db = ApplicantDatabaseManager()"
+```
+
+### MCP Integration
+```bash
+# Test MCP connection
+python3 scripts/test_mcp_connection.py
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+Create a `.env` file in the root directory:
+```env
+# Database
+DATABASE_URL=sqlite:///output/applicants/applicants.db
+
+# API Keys (if needed)
+OPENAI_API_KEY=your_openai_key_here
+```
+
+### MCP Setup
+The project includes MCP (Model Context Protocol) integration for web scraping:
+- Docker MCP Gateway for Playwright automation
+- 24 available Playwright tools
+- Automated browser control and data extraction
+
+## 📊 Data Processing Pipeline
+
+1. **Data Collection**: Web scraping and manual input
+2. **Processing**: Automated data cleaning and validation
+3. **Analysis**: Rating and scoring algorithms
+4. **Export**: Multiple format support (JSON, HTML, CSV)
+5. **Visualization**: Charts and reports generation
+
+## 🎨 UI Components
+
+- **Responsive Design**: Mobile-first approach with Tailwind CSS
+- **Modern Interface**: Clean, professional design
+- **Interactive Elements**: Hover effects and smooth transitions
+- **Data Visualization**: Charts and statistics display
+- **Filtering System**: Advanced search and filter capabilities
+
+## 🚀 Deployment
+
+### GitHub Pages (Automatic)
+The application is automatically deployed to GitHub Pages via GitHub Actions:
+- **Trigger**: Push to master branch
+- **Build**: Next.js static export
+- **Deploy**: GitHub Pages hosting
+
+### Manual Deployment
+```bash
+# Build for production
+cd nextjs-app
+npm run build
+
+# Export static files
+npm run export
+```
+
+## 📈 Performance
+
+- **Build Time**: ~30 seconds
+- **Bundle Size**: Optimized with Next.js
+- **Loading Speed**: Fast static generation
+- **SEO**: Optimized meta tags and structure
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+- **Issues**: [GitHub Issues](https://github.com/lac5q/applicant-management-system/issues)
+- **Documentation**: Check the `docs/` folder for detailed guides
+- **Email**: Contact through GitHub profile
+
+## 🔄 Changelog
+
+### Version 1.0.0 (July 19, 2025)
+- ✅ Initial release
+- ✅ Next.js frontend with TypeScript
+- ✅ Python backend with data processing
+- ✅ MCP integration for web scraping
+- ✅ GitHub Pages deployment
+- ✅ Comprehensive documentation
 
 ---
 
-**Last Updated**: July 19, 2025  
-**Version**: 2.0 (Docker MCP Only)  
-**Status**: Clean, organized, ready for production use 
+**Built with ❤️ using Next.js, Python, and modern web technologies** 

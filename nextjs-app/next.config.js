@@ -1,16 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
-  swcMinify: true,
-  output: 'export',
-  distDir: 'out',
-  images: {
-    domains: ['localhost'],
-    unoptimized: true
-  },
-  trailingSlash: true,
+  // Only enable static export for production builds
+  output: process.env.NODE_ENV === 'production' ? 'export' : undefined,
+  distDir: process.env.NODE_ENV === 'production' ? 'out' : '.next',
   basePath: process.env.NODE_ENV === 'production' ? '/applicant-management-system' : '',
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/applicant-management-system/' : ''
+  assetPrefix: process.env.NODE_ENV === 'production' ? '/applicant-management-system/' : '',
+  trailingSlash: true,
+  images: {
+    unoptimized: true
+  }
 }
 
 module.exports = nextConfig

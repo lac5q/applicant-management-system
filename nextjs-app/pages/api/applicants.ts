@@ -1,38 +1,39 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
-import { Applicant } from '../../types'
+import { NextApiRequest, NextApiResponse } from 'next'
+import fs from 'fs'
+import path from 'path'
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<Applicant[] | { error: string }>
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return res.status(405).json({ message: 'Method not allowed' })
   }
 
   try {
-    // In a real app, this would connect to your database
-    // For now, we'll return mock data
-    const applicants: Applicant[] = [
-      {
-        id: 1,
-        name: "John Smith",
-        title: "Senior Shopify Developer",
-        location: "New York, NY",
-        hourly_rate: "$45/hr",
-        job_success: "98%",
-        total_earned: "$12,450",
-        hours_worked: "276",
-        rating: 5,
-        overview: "Experienced Shopify developer with 5+ years building custom e-commerce solutions.",
-        skills: ["Shopify", "Liquid", "JavaScript", "React"],
-        job_title: "Shopify Developer",
-        status: "pending",
-        created_at: "2025-01-19T10:00:00Z"
-      }
-    ]
+    // Read from the JSON file instead of database
+    const jsonPath = path.join(process.cwd(), '..', 'output', 'processed_candidates', 'all_processed_candidates_20250719_031346.json')
+    console.log('JSON path:', jsonPath)
     
-    res.status(200).json(applicants)
+    const jsonData = fs.readFileSync(jsonPath, 'utf8')
+    const parsedData = JSON.parse(jsonData)
+    const applicants = parsedData.applicants || parsedData
+
+    console.log('Found', applicants.length, 'applicants')
+
+    // Calculate stats
+    const stats = {
+      total: applicants.length,
+      positions: new Set(applicants.map((a: any) => a.job_title)).size,
+      averageRating: applicants.length > 0 
+        ? (applicants.reduce((sum: number, a: any) => sum + (a.rating || 0), 0) / applicants.length).toFixed(1)
+        : 0,
+      totalEarned: applicants.reduce((sum: number, a: any) => {
+        const earned = a.total_earned ? parseFloat(a.total_earned.replace(/[^0-9.]/g, '')) : 0
+        return sum + earned
+      }, 0)
+    }
+
+    res.status(200).json({ applicants, stats })
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch applicants' })
+    console.error('API error:', error)
+    res.status(500).json({ error: 'Internal server error' })
   }
 }
