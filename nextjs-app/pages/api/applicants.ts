@@ -8,13 +8,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Read from the JSON file instead of database
-    const jsonPath = path.join(process.cwd(), '..', 'output', 'processed_candidates', 'all_processed_candidates_20250719_031346.json')
-    console.log('JSON path:', jsonPath)
+    let applicants = []
     
-    const jsonData = fs.readFileSync(jsonPath, 'utf8')
-    const parsedData = JSON.parse(jsonData)
-    const applicants = parsedData.applicants || parsedData
+    // Try to read from the JSON file
+    try {
+      const jsonPath = path.join(process.cwd(), '..', 'output', 'processed_candidates', 'all_processed_candidates_20250719_031346.json')
+      console.log('JSON path:', jsonPath)
+      
+      const jsonData = fs.readFileSync(jsonPath, 'utf8')
+      const parsedData = JSON.parse(jsonData)
+      applicants = parsedData.applicants || parsedData
+    } catch (fileError: any) {
+      console.log('File not found, using sample data:', fileError?.message || 'Unknown error')
+      // Fallback to sample data for Vercel deployment
+      applicants = [
+        {
+          name: "Sample Candidate",
+          job_title: "UX Designer",
+          rating: 4.5,
+          total_earned: "$15,000",
+          skills: ["Figma", "Adobe XD", "User Research"],
+          experience: "3 years",
+          location: "Remote"
+        }
+      ]
+    }
 
     console.log('Found', applicants.length, 'applicants')
 
