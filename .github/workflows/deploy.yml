@@ -1,4 +1,4 @@
-name: Deploy Next.js App to GitHub Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
@@ -26,19 +26,20 @@ jobs:
         cd nextjs-app
         npm ci
         
-    - name: Build Next.js app
+    - name: Build application
       run: |
         cd nextjs-app
         npm run build
         
-    - name: Setup Pages
-      uses: actions/configure-pages@v4
-      
-    - name: Upload artifact
-      uses: actions/upload-pages-artifact@v3
-      with:
-        path: nextjs-app/out
+    - name: Export static files
+      run: |
+        cd nextjs-app
+        npm run export
         
     - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4 
+      uses: peaceiris/actions-gh-pages@v3
+      if: github.ref == 'refs/heads/master'
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./nextjs-app/out
+        force_orphan: true 
