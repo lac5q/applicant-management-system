@@ -4,10 +4,6 @@ const nextConfig = {
   trailingSlash: true,
   images: {
     unoptimized: true
-  },
-  // Enable experimental features for better performance
-  experimental: {
-    optimizeCss: true
   }
 }
 
