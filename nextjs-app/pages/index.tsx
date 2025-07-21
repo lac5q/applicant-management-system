@@ -376,7 +376,7 @@ const Home = React.memo(function Home() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Earned</p>
-                  <p className="text-2xl font-semibold text-gray-900">${stats.totalEarned.toLocaleString()}</p>
+                  <p className="text-2xl font-semibold text-gray-900">${((stats?.totalEarned || 0) as number).toLocaleString()}</p>
                 </div>
               </div>
             </div>
