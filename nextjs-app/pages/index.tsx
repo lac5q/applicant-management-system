@@ -47,6 +47,11 @@ interface Filters {
   status: string
 }
 
+interface SortConfig {
+  field: string
+  direction: 'asc' | 'desc'
+}
+
 const Home = React.memo(function Home() {
   const [applicants, setApplicants] = useState<Applicant[]>([])
   const [stats, setStats] = useState<Stats>({
@@ -67,13 +72,112 @@ const Home = React.memo(function Home() {
     minJobSuccess: 0,
     status: ''
   })
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    field: 'ranking_score',
+    direction: 'desc'
+  })
   const [expandedFilters, setExpandedFilters] = useState<{[key: string]: boolean}>({
     jobPosting: true,
     search: false,
     location: false,
     skills: false,
-    rating: false
+    rating: false,
+    sorting: false
   })
+
+  // Available sorting options
+  const sortOptions = [
+    { value: 'ranking_score', label: 'Ranking Score', icon: '🏆' },
+    { value: 'rating', label: 'Rating', icon: '⭐' },
+    { value: 'name', label: 'Name', icon: '👤' },
+    { value: 'hourly_rate', label: 'Hourly Rate', icon: '💰' },
+    { value: 'job_success', label: 'Job Success', icon: '📈' },
+    { value: 'total_earned', label: 'Total Earned', icon: '💵' },
+    { value: 'hours_worked', label: 'Hours Worked', icon: '⏰' },
+    { value: 'jobs_completed', label: 'Jobs Completed', icon: '✅' },
+    { value: 'location', label: 'Location', icon: '🌍' },
+    { value: 'job_title', label: 'Job Title', icon: '💼' },
+    { value: 'applied_date', label: 'Applied Date', icon: '📅' },
+    { value: 'data_quality_score', label: 'Data Quality', icon: '📊' }
+  ]
+
+  // Sorting function
+  const sortApplicants = useCallback((applicants: Applicant[], sortConfig: SortConfig) => {
+    return [...applicants].sort((a, b) => {
+      let aValue: any = a[sortConfig.field as keyof Applicant]
+      let bValue: any = b[sortConfig.field as keyof Applicant]
+
+      // Handle special cases for different field types
+      switch (sortConfig.field) {
+        case 'hourly_rate':
+          // Extract numeric value from rate strings like "$35/hr"
+          aValue = parseFloat(aValue?.replace(/[^0-9.]/g, '') || '0')
+          bValue = parseFloat(bValue?.replace(/[^0-9.]/g, '') || '0')
+          break
+        case 'job_success':
+          // Extract numeric value from success strings like "95% Job Success"
+          aValue = parseFloat(aValue?.replace(/[^0-9.]/g, '') || '0')
+          bValue = parseFloat(bValue?.replace(/[^0-9.]/g, '') || '0')
+          break
+        case 'total_earned':
+          // Extract numeric value from earned strings like "$15,000+ earned"
+          aValue = parseFloat(aValue?.replace(/[^0-9.]/g, '') || '0')
+          bValue = parseFloat(bValue?.replace(/[^0-9.]/g, '') || '0')
+          break
+        case 'hours_worked':
+          // Extract numeric value from hours strings like "500 total hours"
+          aValue = parseFloat(aValue?.replace(/[^0-9.]/g, '') || '0')
+          bValue = parseFloat(bValue?.replace(/[^0-9.]/g, '') || '0')
+          break
+        case 'jobs_completed':
+          // Extract numeric value from jobs strings like "25 completed jobs"
+          aValue = parseFloat(aValue?.replace(/[^0-9.]/g, '') || '0')
+          bValue = parseFloat(bValue?.replace(/[^0-9.]/g, '') || '0')
+          break
+        case 'name':
+        case 'location':
+        case 'job_title':
+          // String comparison
+          aValue = (aValue || '').toLowerCase()
+          bValue = (bValue || '').toLowerCase()
+          break
+        case 'applied_date':
+          // Date comparison
+          aValue = new Date(aValue || '1970-01-01').getTime()
+          bValue = new Date(bValue || '1970-01-01').getTime()
+          break
+        default:
+          // Numeric comparison for rating, ranking_score, data_quality_score
+          aValue = parseFloat(aValue || '0')
+          bValue = parseFloat(bValue || '0')
+      }
+
+      // Handle null/undefined values
+      if (aValue === null || aValue === undefined) aValue = sortConfig.field.includes('rate') ? 0 : ''
+      if (bValue === null || bValue === undefined) bValue = sortConfig.field.includes('rate') ? 0 : ''
+
+      // Sort based on direction
+      if (sortConfig.direction === 'asc') {
+        return aValue > bValue ? 1 : aValue < bValue ? -1 : 0
+      } else {
+        return aValue < bValue ? 1 : aValue > bValue ? -1 : 0
+      }
+    })
+  }, [])
+
+  // Handle sort change
+  const handleSortChange = useCallback((field: string) => {
+    setSortConfig(prev => ({
+      field,
+      direction: prev.field === field && prev.direction === 'desc' ? 'asc' : 'desc'
+    }))
+  }, [])
+
+  // Get sort direction indicator
+  const getSortIndicator = useCallback((field: string) => {
+    if (sortConfig.field !== field) return '↕️'
+    return sortConfig.direction === 'asc' ? '↑' : '↓'
+  }, [sortConfig])
 
   // Memoize filter functions to prevent unnecessary re-renders
   const toggleFilterSection = useCallback((section: string) => {
@@ -152,9 +256,10 @@ const Home = React.memo(function Home() {
     fetchApplicants()
   }, [])
 
-  // Apply filters using useMemo for better performance
-  const filteredApplicants = useMemo(() => {
-    return applicants.filter(applicant => {
+  // Apply filters and sorting using useMemo for better performance
+  const filteredAndSortedApplicants = useMemo(() => {
+    // First apply filters
+    const filtered = applicants.filter(applicant => {
       // Search filter
       if (filters.search) {
         const searchLower = filters.search.toLowerCase()
@@ -206,7 +311,10 @@ const Home = React.memo(function Home() {
 
       return true
     })
-  }, [applicants, filters])
+
+    // Then apply sorting
+    return sortApplicants(filtered, sortConfig)
+  }, [applicants, filters, sortConfig, sortApplicants])
 
 
 
@@ -288,30 +396,30 @@ const Home = React.memo(function Home() {
                   <div className="text-sm text-gray-600">Expected</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">{filteredApplicants.length}</div>
+                  <div className="text-2xl font-bold text-green-600">{filteredAndSortedApplicants.length}</div>
                   <div className="text-sm text-gray-600">Extracted</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">{filteredApplicants.length}</div>
+                  <div className="text-2xl font-bold text-purple-600">{filteredAndSortedApplicants.length}</div>
                   <div className="text-sm text-gray-600">Saved</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600">{filteredApplicants.filter(a => a.rating > 0).length}</div>
+                  <div className="text-2xl font-bold text-orange-600">{filteredAndSortedApplicants.filter(a => a.rating > 0).length}</div>
                   <div className="text-sm text-gray-600">Rated</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-indigo-600">{((filteredApplicants.length / 60) * 100).toFixed(1)}%</div>
+                  <div className="text-2xl font-bold text-indigo-600">{((filteredAndSortedApplicants.length / 60) * 100).toFixed(1)}%</div>
                   <div className="text-sm text-gray-600">Complete</div>
                 </div>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
                 <div 
                   className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-300" 
-                  style={{ width: `${(filteredApplicants.length / 60) * 100}%` }}
+                  style={{ width: `${(filteredAndSortedApplicants.length / 60) * 100}%` }}
                 ></div>
               </div>
               <div className="flex justify-between items-center text-sm text-gray-600">
-                <span>🟡 Extraction in progress - {60 - filteredApplicants.length} candidates remaining</span>
+                <span>🟡 Extraction in progress - {60 - filteredAndSortedApplicants.length} candidates remaining</span>
                 <a 
                   href="/output/reports/extraction_status_dashboard.html" 
                   target="_blank"
@@ -334,7 +442,7 @@ const Home = React.memo(function Home() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Applicants</p>
-                  <p className="text-2xl font-semibold text-gray-900">{filteredApplicants.length} / {stats.total}</p>
+                  <p className="text-2xl font-semibold text-gray-900">{filteredAndSortedApplicants.length} / {stats.total}</p>
                 </div>
               </div>
             </div>
@@ -424,6 +532,40 @@ const Home = React.memo(function Home() {
                     <option key={posting} value={posting}>{posting}</option>
                   ))}
                 </select>
+              </div>
+
+              {/* Sorting Section - Always Visible */}
+              <div className="border-t border-gray-200 pt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Sort By {sortConfig.field !== 'ranking_score' && (
+                    <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {sortOptions.find(opt => opt.value === sortConfig.field)?.label}
+                    </span>
+                  )}
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <select
+                    value={sortConfig.field}
+                    onChange={(e) => handleSortChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {sortOptions.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.icon} {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => setSortConfig(prev => ({ ...prev, direction: prev.direction === 'asc' ? 'desc' : 'asc' }))}
+                    className="px-4 py-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-center"
+                  >
+                    <span className="mr-2">{getSortIndicator(sortConfig.field)}</span>
+                    {sortConfig.direction === 'asc' ? 'Ascending' : 'Descending'}
+                  </button>
+                </div>
+                <div className="mt-2 text-xs text-gray-500">
+                  Current: {sortOptions.find(opt => opt.value === sortConfig.field)?.icon} {sortOptions.find(opt => opt.value === sortConfig.field)?.label} ({sortConfig.direction === 'asc' ? 'Low to High' : 'High to Low'})
+                </div>
               </div>
 
               {/* Search Filter - Collapsible */}
@@ -619,13 +761,25 @@ const Home = React.memo(function Home() {
           {/* Applicants List */}
           <div className="bg-white rounded-lg shadow">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Filtered Applicants ({filteredApplicants.length} of {stats.total})
-              </h2>
-              <p className="text-sm text-gray-600 mt-1">Showing applicants from Upwork job postings</p>
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    Filtered Applicants ({filteredAndSortedApplicants.length} of {stats.total})
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">Showing applicants from Upwork job postings</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-gray-600">
+                    Sorted by: {sortOptions.find(opt => opt.value === sortConfig.field)?.icon} {sortOptions.find(opt => opt.value === sortConfig.field)?.label}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {sortConfig.direction === 'asc' ? 'Low to High' : 'High to Low'}
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="divide-y divide-gray-200">
-              {filteredApplicants.length === 0 ? (
+              {filteredAndSortedApplicants.length === 0 ? (
                 <div className="px-6 py-8 text-center">
                   <p className="text-gray-500">No applicants match your current filters.</p>
                   <button 
@@ -636,7 +790,7 @@ const Home = React.memo(function Home() {
                   </button>
                 </div>
               ) : (
-                filteredApplicants.map((applicant) => (
+                filteredAndSortedApplicants.map((applicant) => (
                   <div key={applicant.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
