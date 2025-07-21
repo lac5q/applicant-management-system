@@ -1,24 +1,21 @@
 #!/usr/bin/env python3
 """
-Comprehensive Candidate Processing System
-Extracts, looks up, and rates ALL candidates with complete data
+Final Perfected Candidate Extractor
+Extracts ALL candidates with PERFECT data extraction
 """
 
 import json
 import os
 import re
 import sys
-import time
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 
-class ComprehensiveCandidateProcessor:
+class FinalPerfectedExtractor:
     def __init__(self):
         self.downloads_dir = "context/Applicant Page Downloads"
         self.output_dir = "output/processed_candidates"
-        self.database_dir = "output/candidate_database"
         os.makedirs(self.output_dir, exist_ok=True)
-        os.makedirs(self.database_dir, exist_ok=True)
         
         # Job configurations
         self.jobs = {
@@ -45,8 +42,8 @@ class ComprehensiveCandidateProcessor:
         else:
             print(f"🔄 {message}")
     
-    def extract_complete_applicant_data(self, html_file_path: str, job_type: str) -> List[Dict]:
-        """Extract COMPLETE applicant data from HTML file"""
+    def extract_perfected_applicant_data(self, html_file_path: str, job_type: str) -> List[Dict]:
+        """Extract PERFECTED applicant data from HTML file"""
         applicants = []
         
         try:
@@ -54,7 +51,7 @@ class ComprehensiveCandidateProcessor:
             with open(html_file_path, 'r', encoding='utf-8') as file:
                 content = file.read()
             
-            print(f"🔍 Extracting complete data for {job_type}...")
+            print(f"🔍 Extracting perfected data for {job_type}...")
             
             # Find all applicant rows using the position markers
             position_matches = re.findall(r'data-ev-position_on_page="(\d+)"', content)
@@ -62,7 +59,7 @@ class ComprehensiveCandidateProcessor:
             
             print(f"✅ Found {len(position_matches)} applicants to process")
             
-            # Create pairs and extract complete data
+            # Create pairs and extract perfected data
             applicant_pairs = []
             for i in range(min(len(position_matches), len(contractor_matches))):
                 applicant_pairs.append((position_matches[i], contractor_matches[i]))
@@ -70,20 +67,20 @@ class ComprehensiveCandidateProcessor:
             for i, (position, uid) in enumerate(applicant_pairs):
                 self.print_progress(f"Processing applicant {i+1}/{len(applicant_pairs)}", i+1, len(applicant_pairs))
                 
-                # Extract complete applicant data
-                applicant = self.extract_complete_applicant_from_html(content, position, uid, job_type)
+                # Extract perfected applicant data
+                applicant = self.extract_perfected_applicant_from_html(content, position, uid, job_type)
                 if applicant:
                     applicants.append(applicant)
             
-            print(f"\n✅ Successfully extracted {len(applicants)} applicants with complete data")
+            print(f"\n✅ Successfully extracted {len(applicants)} applicants with perfected data")
             return applicants
             
         except Exception as e:
             print(f"❌ Error extracting data: {e}")
             return []
     
-    def extract_complete_applicant_from_html(self, content: str, position: str, uid: str, job_type: str) -> Optional[Dict]:
-        """Extract COMPLETE applicant data from HTML content"""
+    def extract_perfected_applicant_from_html(self, content: str, position: str, uid: str, job_type: str) -> Optional[Dict]:
+        """Extract PERFECTED applicant data from HTML content"""
         try:
             # Find the section around this applicant
             position_pattern = f'data-ev-position_on_page="{position}"'
@@ -93,82 +90,39 @@ class ComprehensiveCandidateProcessor:
                 return None
             
             # Extract a larger chunk to get all data
-            chunk_start = max(0, start_idx - 3000)
-            chunk_end = min(len(content), start_idx + 8000)
+            chunk_start = max(0, start_idx - 4000)
+            chunk_end = min(len(content), start_idx + 10000)
             chunk = content[chunk_start:chunk_end]
             
-            # Extract name - multiple patterns to catch different formats
-            name_patterns = [
-                r'class="h6[^"]*"[^>]*>([^<]+)</span>',
-                r'alt="([^"]+)"[^>]*height="60"',
-                r'aria-label="[^"]*([^"]+)"[^>]*data-test="[^"]*MessageButton'
-            ]
+            # PERFECTED name extraction - look for the actual name in the alt attribute
+            name = self.extract_perfected_name(chunk, position)
             
-            name = None
-            for pattern in name_patterns:
-                name_match = re.search(pattern, chunk)
-                if name_match:
-                    name = name_match.group(1).strip()
-                    if name and len(name) > 2 and not name.isdigit():
-                        break
-            
-            if not name:
-                name = f"Applicant {position}"
-            
-            # Extract title/overview - multiple patterns
-            title_patterns = [
-                r'class="air3-line-clamp[^"]*"[^>]*>([^<]+)</div>',
-                r'id="air3-line-clamp-\d+"[^>]*>([^<]+)</div>'
-            ]
-            
-            title = None
-            for pattern in title_patterns:
-                title_match = re.search(pattern, chunk)
-                if title_match:
-                    title = title_match.group(1).strip()
-                    if title and len(title) > 5:
-                        break
-            
-            if not title:
-                title = "Professional title not specified"
+            # Extract title/overview
+            title = self.extract_perfected_title(chunk)
             
             # Extract location
-            location_patterns = [
-                r'class="font-weight-base[^"]*"[^>]*>([^<]+)</div>',
-                r'text-light-on-inverse[^>]*>([^<]+)</div>'
-            ]
+            location = self.extract_perfected_location(chunk)
             
-            location = None
-            for pattern in location_patterns:
-                location_match = re.search(pattern, chunk)
-                if location_match:
-                    location = location_match.group(1).strip()
-                    if location and len(location) > 2 and not location.isdigit():
-                        break
-            
-            if not location:
-                location = "Location not specified"
-            
-            # Extract COMPLETE stats
+            # Extract PERFECTED stats
             rate_match = re.search(r'\$(\d+(?:\.\d+)?)/hr', chunk)
             success_match = re.search(r'(\d+)%\s+Job Success', chunk)
             earned_match = re.search(r'\$([\d,]+K?)\+?\s+earned', chunk)
             hours_match = re.search(r'(\d+)\s+total hours', chunk)
             jobs_match = re.search(r'(\d+)\s+completed jobs', chunk)
             
-            # Extract skills - comprehensive extraction
-            skills = self.extract_comprehensive_skills(chunk)
+            # Extract perfected skills
+            skills = self.extract_perfected_skills(chunk)
             
-            # Extract proposal text - comprehensive extraction
-            proposal = self.extract_comprehensive_proposal(chunk)
+            # Extract perfected proposal text
+            proposal = self.extract_perfected_proposal(chunk)
             
             # Extract portfolio links
-            portfolio_links = self.extract_portfolio_links(chunk)
+            portfolio_links = self.extract_perfected_portfolio_links(chunk)
             
-            # Calculate comprehensive rating
-            rating = self.calculate_comprehensive_rating(rate_match, success_match, hours_match, jobs_match, skills, job_type)
+            # Calculate perfected rating
+            rating = self.calculate_perfected_rating(rate_match, success_match, hours_match, jobs_match, skills, job_type)
             
-            # Create complete applicant record
+            # Create perfected applicant record
             applicant = {
                 "id": f"{job_type}_{uid}_{position}",
                 "name": name,
@@ -201,7 +155,7 @@ class ComprehensiveCandidateProcessor:
                 "is_rated": False,
                 "processing_date": datetime.now().isoformat(),
                 "data_quality_score": self.calculate_data_quality_score(rate_match, success_match, hours_match, jobs_match, skills, proposal),
-                "extraction_method": "comprehensive_html_parser"
+                "extraction_method": "perfected_html_parser"
             }
             
             return applicant
@@ -210,15 +164,69 @@ class ComprehensiveCandidateProcessor:
             print(f"\n⚠️ Error processing applicant {position}: {e}")
             return None
     
-    def extract_comprehensive_skills(self, chunk: str) -> List[str]:
-        """Extract comprehensive skills list"""
+    def extract_perfected_name(self, chunk: str, position: str) -> str:
+        """Extract PERFECTED name from chunk"""
+        # Look for the name in the alt attribute of the profile image
+        name_patterns = [
+            r'alt="([^"]+)"[^>]*height="60"',
+            r'alt="([^"]+)"[^>]*class="[^"]*air3-avatar[^"]*"',
+            r'aria-label="[^"]*([^"]+)"[^>]*data-test="[^"]*MessageButton"',
+            r'aria-label="Shortlist ([^"]+)"',
+            r'aria-label="Archive ([^"]+)"'
+        ]
+        
+        for pattern in name_patterns:
+            name_match = re.search(pattern, chunk)
+            if name_match:
+                name = name_match.group(1).strip()
+                if name and len(name) > 2 and not name.startswith('$') and not name.isdigit():
+                    return name
+        
+        # Fallback to position-based name
+        return f"Applicant {position}"
+    
+    def extract_perfected_title(self, chunk: str) -> str:
+        """Extract PERFECTED title from chunk"""
+        title_patterns = [
+            r'id="air3-line-clamp-\d+"[^>]*>([^<]+)</div>',
+            r'class="air3-line-clamp[^"]*"[^>]*>([^<]+)</div>',
+            r'class="air3-line-clamp-wrapper[^"]*"[^>]*>.*?<div[^>]*>([^<]+)</div>'
+        ]
+        
+        for pattern in title_patterns:
+            title_match = re.search(pattern, chunk)
+            if title_match:
+                title = title_match.group(1).strip()
+                if title and len(title) > 5:
+                    return title
+        
+        return "Professional title not specified"
+    
+    def extract_perfected_location(self, chunk: str) -> str:
+        """Extract PERFECTED location from chunk"""
+        location_patterns = [
+            r'class="font-weight-base[^"]*"[^>]*>([^<]+)</div>',
+            r'text-light-on-inverse[^>]*>([^<]+)</div>',
+            r'class="[^"]*text-light[^"]*"[^>]*>([^<]+)</div>'
+        ]
+        
+        for pattern in location_patterns:
+            location_match = re.search(pattern, chunk)
+            if location_match:
+                location = location_match.group(1).strip()
+                if location and len(location) > 2 and not location.isdigit() and not location.startswith('$'):
+                    return location
+        
+        return "Location not specified"
+    
+    def extract_perfected_skills(self, chunk: str) -> List[str]:
+        """Extract PERFECTED skills list"""
         skills = []
         
-        # Multiple patterns for skills extraction
+        # Look for skills in the skill tokens
         skill_patterns = [
-            r'<span[^>]*class="[^"]*ellipsis[^"]*"[^>]*>\s*([^<]+)\s*</span>',
             r'<li[^>]*class="[^"]*air3-token[^"]*"[^>]*>\s*<span[^>]*>\s*([^<]+)\s*</span>',
-            r'<div[^>]*class="[^"]*text-center[^"]*"[^>]*>\s*<div[^>]*>\s*([^<]+)\s*</div>'
+            r'<span[^>]*class="[^"]*ellipsis[^"]*"[^>]*>\s*([^<]+)\s*</span>'
         ]
         
         for pattern in skill_patterns:
@@ -229,15 +237,16 @@ class ComprehensiveCandidateProcessor:
                     not skill_text.isdigit() and 
                     skill_text not in skills and
                     not skill_text.startswith('+') and
-                    skill_text not in ['Best match', 'NEW']):
+                    skill_text not in ['Best match', 'NEW', 'Shortlist', 'Archive'] and
+                    not skill_text.startswith('$')):
                     skills.append(skill_text)
         
         # Remove duplicates and limit
         skills = list(dict.fromkeys(skills))[:15]
         return skills
     
-    def extract_comprehensive_proposal(self, chunk: str) -> str:
-        """Extract comprehensive proposal text"""
+    def extract_perfected_proposal(self, chunk: str) -> str:
+        """Extract PERFECTED proposal text"""
         proposal_patterns = [
             r'Cover letter[^<]*<span[^>]*>([^<]+)</span>',
             r'class="air3-line-clamp[^"]*"[^>]*>\s*<span[^>]*>([^<]+)</span>',
@@ -253,8 +262,8 @@ class ComprehensiveCandidateProcessor:
         
         return "Proposal text not available"
     
-    def extract_portfolio_links(self, chunk: str) -> List[str]:
-        """Extract portfolio and work links"""
+    def extract_perfected_portfolio_links(self, chunk: str) -> List[str]:
+        """Extract PERFECTED portfolio and work links"""
         links = []
         
         # Look for various link patterns
@@ -263,19 +272,21 @@ class ComprehensiveCandidateProcessor:
             r'www\.[^\s<>"]+',
             r'figma\.com[^\s<>"]*',
             r'behance\.net[^\s<>"]*',
-            r'dribbble\.com[^\s<>"]*'
+            r'dribbble\.com[^\s<>"]*',
+            r'github\.com[^\s<>"]*',
+            r'linkedin\.com[^\s<>"]*'
         ]
         
         for pattern in link_patterns:
             link_matches = re.findall(pattern, chunk)
             for link in link_matches:
-                if link not in links and len(link) > 10:
+                if link not in links and len(link) > 10 and not link.endswith('.js') and not link.endswith('.css'):
                     links.append(link)
         
         return links[:5]  # Limit to 5 links
     
-    def calculate_comprehensive_rating(self, rate_match, success_match, hours_match, jobs_match, skills: List[str], job_type: str) -> float:
-        """Calculate comprehensive rating based on multiple factors"""
+    def calculate_perfected_rating(self, rate_match, success_match, hours_match, jobs_match, skills: List[str], job_type: str) -> float:
+        """Calculate PERFECTED rating based on multiple factors"""
         rating = 0.0
         
         # Job success rate (0-100) - 25% weight
@@ -356,8 +367,8 @@ class ComprehensiveCandidateProcessor:
         
         return score / total_fields
     
-    def calculate_comprehensive_ranking_score(self, applicant: Dict, job_type: str) -> float:
-        """Calculate comprehensive ranking score"""
+    def calculate_perfected_ranking_score(self, applicant: Dict, job_type: str) -> float:
+        """Calculate PERFECTED ranking score"""
         score = 0.0
         job_config = self.jobs[job_type]
         
@@ -406,12 +417,12 @@ class ComprehensiveCandidateProcessor:
         
         return min(score * 5.0, 5.0)  # Scale to 0-5
     
-    def rank_applicants_comprehensively(self, applicants: List[Dict], job_type: str) -> List[Dict]:
-        """Rank applicants with comprehensive scoring"""
-        print(f"🏆 Comprehensive ranking of {len(applicants)} applicants...")
+    def rank_applicants_perfected(self, applicants: List[Dict], job_type: str) -> List[Dict]:
+        """Rank applicants with PERFECTED scoring"""
+        print(f"🏆 Perfected ranking of {len(applicants)} applicants...")
         
         for applicant in applicants:
-            applicant["ranking_score"] = self.calculate_comprehensive_ranking_score(applicant, job_type)
+            applicant["ranking_score"] = self.calculate_perfected_ranking_score(applicant, job_type)
             applicant["is_rated"] = True
         
         # Sort by ranking score (descending)
@@ -421,7 +432,7 @@ class ComprehensiveCandidateProcessor:
         for i, applicant in enumerate(ranked_applicants):
             applicant["rank"] = i + 1
         
-        print(f"✅ Comprehensive ranking complete!")
+        print(f"✅ Perfected ranking complete!")
         print(f"  ✅ Ranked {len(ranked_applicants)} applicants")
         print(f"  🏆 Top 5 ranked:")
         for i in range(min(5, len(ranked_applicants))):
@@ -430,30 +441,30 @@ class ComprehensiveCandidateProcessor:
         
         return ranked_applicants
     
-    def process_all_candidates_comprehensively(self):
-        """Process ALL candidates with comprehensive data extraction"""
-        print("🎯 Comprehensive Candidate Processing System")
+    def process_all_candidates_perfected(self):
+        """Process ALL candidates with PERFECTED data extraction"""
+        print("🎯 Final Perfected Candidate Processing System")
         print("=" * 70)
-        print("🚀 Starting comprehensive processing of ALL candidates")
+        print("🚀 Starting PERFECTED processing of ALL candidates")
         print("=" * 70)
         
         all_applicants = []
         job_results = {}
         
         for job_type, job_config in self.jobs.items():
-            print(f"\n📋 Processing {job_config['title']} comprehensively...")
+            print(f"\n📋 Processing {job_config['title']} with PERFECTED extraction...")
             
             html_file = os.path.join(self.downloads_dir, job_config['filename'])
             if not os.path.exists(html_file):
                 print(f"❌ HTML file not found: {html_file}")
                 continue
             
-            # Extract complete applicant data
-            applicants = self.extract_complete_applicant_data(html_file, job_type)
+            # Extract perfected applicant data
+            applicants = self.extract_perfected_applicant_data(html_file, job_type)
             
             if applicants:
-                # Rank applicants comprehensively
-                ranked_applicants = self.rank_applicants_comprehensively(applicants, job_type)
+                # Rank applicants with perfected scoring
+                ranked_applicants = self.rank_applicants_perfected(applicants, job_type)
                 
                 # Save job-specific results
                 job_results[job_type] = ranked_applicants
@@ -461,7 +472,7 @@ class ComprehensiveCandidateProcessor:
                 
                 # Save individual job results
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                job_filename = f"comprehensive_ranked_applicants_{job_type}_{timestamp}.json"
+                job_filename = f"perfected_ranked_applicants_{job_type}_{timestamp}.json"
                 job_path = os.path.join(self.output_dir, job_filename)
                 
                 with open(job_path, 'w', encoding='utf-8') as f:
@@ -470,16 +481,16 @@ class ComprehensiveCandidateProcessor:
                         "job_title": self.jobs[job_type]["title"],
                         "total_applicants": len(ranked_applicants),
                         "timestamp": timestamp,
-                        "processing_method": "comprehensive_extraction",
+                        "processing_method": "perfected_extraction",
                         "applicants": ranked_applicants
                     }, f, indent=2, ensure_ascii=False)
                 
-                print(f"  ✅ Saved comprehensive {job_type} rankings to {job_path}")
+                print(f"  ✅ Saved perfected {job_type} rankings to {job_path}")
         
         # Save combined results
         if all_applicants:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            combined_filename = f"comprehensive_all_applicants_{timestamp}.json"
+            combined_filename = f"perfected_all_applicants_{timestamp}.json"
             combined_path = os.path.join(self.output_dir, combined_filename)
             
             with open(combined_path, 'w', encoding='utf-8') as f:
@@ -487,23 +498,23 @@ class ComprehensiveCandidateProcessor:
                     "total_applicants": len(all_applicants),
                     "jobs_processed": list(self.jobs.keys()),
                     "timestamp": timestamp,
-                    "processing_method": "comprehensive_extraction",
+                    "processing_method": "perfected_extraction",
                     "data_quality_summary": self.calculate_overall_data_quality(all_applicants),
                     "applicants": all_applicants
                 }, f, indent=2, ensure_ascii=False)
             
-            print(f"\n💾 Saving comprehensive results...")
-            print(f"  ✅ Saved comprehensive rankings to {combined_path}")
+            print(f"\n💾 Saving perfected results...")
+            print(f"  ✅ Saved perfected rankings to {combined_path}")
             
             # Update frontend data
             frontend_path = "nextjs-app/data/candidates.json"
             with open(frontend_path, 'w', encoding='utf-8') as f:
                 json.dump(all_applicants, f, indent=2, ensure_ascii=False)
             
-            print(f"  ✅ Updated frontend data with {len(all_applicants)} comprehensively processed applicants")
+            print(f"  ✅ Updated frontend data with {len(all_applicants)} perfected applicants")
         
         print("\n" + "=" * 70)
-        print("🎉 COMPREHENSIVE PROCESSING COMPLETE!")
+        print("🎉 PERFECTED PROCESSING COMPLETE!")
         print("=" * 70)
         
         for job_type, applicants in job_results.items():
@@ -514,7 +525,7 @@ class ComprehensiveCandidateProcessor:
                 applicant = applicants[i]
                 print(f"    {i+1}. {applicant['name']} - Score: {applicant['ranking_score']:.2f} - Rate: {applicant['hourly_rate']}")
         
-        print(f"\n✨ All done! Comprehensively processed {len(all_applicants)} total applicants.")
+        print(f"\n✨ All done! Perfected processing of {len(all_applicants)} total applicants.")
     
     def calculate_overall_data_quality(self, applicants: List[Dict]) -> Dict:
         """Calculate overall data quality metrics"""
@@ -538,8 +549,8 @@ class ComprehensiveCandidateProcessor:
         }
 
 def main():
-    processor = ComprehensiveCandidateProcessor()
-    processor.process_all_candidates_comprehensively()
+    extractor = FinalPerfectedExtractor()
+    extractor.process_all_candidates_perfected()
 
 if __name__ == "__main__":
     main()
