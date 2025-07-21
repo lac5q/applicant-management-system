@@ -12,7 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Try to read from the JSON file
     try {
-      const jsonPath = path.join(process.cwd(), '..', 'output', 'processed_candidates', 'all_processed_candidates_20250719_031346.json')
+      const jsonPath = path.join(process.cwd(), '..', 'output', 'processed_candidates', 'all_ranked_applicants_20250720_201117.json')
       console.log('JSON path:', jsonPath)
       
       const jsonData = fs.readFileSync(jsonPath, 'utf8')
